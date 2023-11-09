@@ -10,6 +10,7 @@ import xgboost
 import pandas as pd
 import matplotlib.pyplot as plt
 from imblearn.under_sampling import RandomUnderSampler
+from learning import active_learning
 
 
 def load(path: str, idx: int = 0, subset: int = 1000):
@@ -34,12 +35,13 @@ def load(path: str, idx: int = 0, subset: int = 1000):
 
 
 def main(args):
+    config = {'n_jobs': os.cpu_count(), 'use_label_encoder': False, 'eval_metric': 'logloss'}
     np.set_printoptions(threshold=np.inf, linewidth=np.inf)
     X, y = load(args.input, args.column, args.number)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=args.test, random_state=args.seed)
     print(f'X_train: {X_train.shape} y_train: {y_train.shape}')
     print(f'X_test: {X_test.shape} y_test: {y_test.shape}')
-    model = xgboost.XGBClassifier(n_jobs=os.cpu_count())
+    model = xgboost.XGBClassifier(**config)
     model.fit(X_train, y_train)
     y_pred = model.predict(X_test)
 
@@ -58,6 +60,8 @@ def main(args):
     disp = ConfusionMatrixDisplay(cm)
     disp.plot()
     plt.savefig(os.path.join(path, 'confusion.png'))
+
+    active_learning([X_train, X_test, y_train, y_test], xgboost.XGBClassifier, config, path, 1000, 9000, 100, 3)
 
 
 if __name__ == '__main__':
